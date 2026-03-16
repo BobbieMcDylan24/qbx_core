@@ -6,6 +6,8 @@ description 'The core resource for the Qbox Framework'
 repository 'https://github.com/Qbox-project/qbx_core'
 version '1.23.0'
 
+ui_page 'html/index.html'
+
 ox_lib 'locale'
 
 shared_scripts {
@@ -59,7 +61,10 @@ files {
     'bridge/qb/shared/export-function.lua',
     'config/client.lua',
     'config/shared.lua',
-    'locales/*.json'
+    'locales/*.json',
+    'html/index.html',
+    'html/style.css',
+    'html/script.js'
 }
 
 dependencies {

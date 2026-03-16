@@ -104,18 +104,6 @@ local randomPeds = {
 
 NetworkStartSoloTutorialSession()
 
-local nationalities = {}
-
-if config.characters.limitNationalities then
-    local nationalityList = lib.load('data.nationalities')
-
-    CreateThread(function()
-        for i = 1, #nationalityList do
-            nationalities[#nationalities + 1] = { value = nationalityList[i] }
-        end
-    end)
-end
-
 local function setupPreviewCam()
     DoScreenFadeIn(1000)
     SetTimecycleModifier('hud_def_blur')
@@ -171,69 +159,6 @@ local function previewPed(citizenId)
     end
 end
 
----@return CharacterRegistration?
-local function characterDialog()
-    local nationalityOption = config.characters.limitNationalities and {
-        type = 'select',
-        required = true,
-        icon = 'user-shield',
-        label = locale('info.nationality'),
-        default = 'American',
-        searchable = true,
-        options = nationalities
-    } or {
-        type = 'input',
-        required = true,
-        icon = 'user-shield',
-        label = locale('info.nationality'),
-        placeholder = 'Duck'
-    }
-
-    return lib.inputDialog(locale('info.character_registration_title'), {
-        {
-            type = 'input',
-            required = true,
-            icon = 'user-pen',
-            label = locale('info.first_name'),
-            placeholder = 'Hank'
-        },
-        {
-            type = 'input',
-            required = true,
-            icon = 'user-pen',
-            label = locale('info.last_name'),
-            placeholder = 'Jordan'
-        },
-        nationalityOption,
-        {
-            type = 'select',
-            required = true,
-            icon = 'circle-user',
-            label = locale('info.gender'),
-            placeholder = locale('info.select_gender'),
-            options = {
-                {
-                    value = locale('info.char_male')
-                },
-                {
-                    value = locale('info.char_female')
-                }
-            }
-        },
-        {
-            type = 'date',
-            required = true,
-            icon = 'calendar-days',
-            label = locale('info.birth_date'),
-            format = config.characters.dateFormat,
-            returnString = true,
-            min = config.characters.dateMin,
-            max = config.characters.dateMax,
-            default = config.characters.dateMax
-        }
-    })
-end
-
 ---@param dialog string[]
 ---@param input integer
 ---@return boolean
@@ -250,6 +175,13 @@ local function checkStrings(dialog, input)
     end
 
     return true
+end
+
+---@param str string
+---@return boolean
+local function validateField(str)
+    if not str or str == '' then return false end
+    return checkStrings({str}, 1)
 end
 
 -- @param str string
@@ -313,34 +245,107 @@ local function spawnLastLocation()
     end
 end
 
----@param cid integer
----@return boolean
-local function createCharacter(cid)
-    previewPed()
+---@param characters PlayerEntity[]
+---@param amount integer
+---@return table
+local function buildCharacterData(characters, amount)
+    local data = {}
+    for i = 1, amount do
+        local character = characters[i]
+        if character then
+            data[i] = {
+                slot        = i,
+                citizenid   = character.citizenid,
+                firstname   = character.charinfo.firstname,
+                lastname    = character.charinfo.lastname,
+                gender      = character.charinfo.gender,
+                birthdate   = character.charinfo.birthdate,
+                nationality = character.charinfo.nationality,
+                account     = character.charinfo.account,
+                phone       = character.charinfo.phone,
+                bank        = character.money.bank,
+                cash        = character.money.cash,
+                job         = character.job.label,
+                jobGrade    = character.job.grade.name,
+                gang        = character.gang.label,
+                gangGrade   = character.gang.grade.name,
+            }
+        else
+            data[i] = { slot = i, empty = true }
+        end
+    end
+    return data
+end
 
-    :: noMatch ::
+-- ── NUI Callbacks ──────────────────────────────────────────────────────────
 
-    local dialog = characterDialog()
+RegisterNUICallback('multichar_preview', function(data, cb)
+    previewPed(data.citizenid)
+    cb({})
+end)
 
-    if not dialog then return false end
+RegisterNUICallback('multichar_play', function(data, cb)
+    DoScreenFadeOut(10)
+    lib.callback.await('qbx_core:server:loadCharacter', false, data.citizenid)
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'close' })
+    if GetResourceState('qbx_apartments'):find('start') then
+        TriggerEvent('apartments:client:setupSpawnUI', data.citizenid)
+    elseif GetResourceState('qbx_spawn'):find('start') then
+        TriggerEvent('qb-spawn:client:setupSpawns', data.citizenid)
+        TriggerEvent('qb-spawn:client:openUI', true)
+    else
+        spawnLastLocation()
+    end
+    destroyPreviewCam()
+    cb({})
+end)
 
-    for input = 1, 3 do -- Run through first 3 inputs, aka first name, last name and nationality
-        if not checkStrings(dialog, input) then
-            Notify(locale('error.no_match_character_registration'), 'error', 10000)
-            goto noMatch
-            break
+RegisterNUICallback('multichar_delete', function(data, cb)
+    local success = lib.callback.await('qbx_core:server:deleteCharacter', false, data.citizenid)
+    if success then
+        Notify(locale('success.character_deleted'), 'success')
+        local characters, amount = lib.callback.await('qbx_core:server:getCharacters')
+        local characterData = buildCharacterData(characters, amount)
+        SendNUIMessage({ action = 'refresh', characters = characterData, amount = amount })
+        -- Use refreshed characterData to avoid stale references after deletion
+        previewPed(characterData[1] and not characterData[1].empty and characterData[1].citizenid)
+    else
+        Notify(locale('error.character_delete_failed'), 'error')
+    end
+    cb({ success = success })
+end)
+
+RegisterNUICallback('multichar_create', function(data, cb)
+    -- Validate text fields against profanity and format rules.
+    -- birthdate is already constrained by the date input min/max on the client, and
+    -- gender is always 0 or 1 so neither requires profanity/format validation.
+    for _, field in ipairs({ data.firstname, data.lastname, data.nationality }) do
+        if not validateField(field) then
+            cb({ error = locale('error.no_match_character_registration') })
+            return
         end
     end
 
     DoScreenFadeOut(150)
     local newData = lib.callback.await('qbx_core:server:createCharacter', false, {
-        firstname = capString(dialog[1]),
-        lastname = capString(dialog[2]),
-        nationality = capString(dialog[3]),
-        gender = dialog[4] == locale('info.char_male') and 0 or 1,
-        birthdate = dialog[5],
-        cid = cid
+        firstname   = capString(data.firstname),
+        lastname    = capString(data.lastname),
+        nationality = capString(data.nationality),
+        gender      = tonumber(data.gender),
+        birthdate   = data.birthdate,
+        cid         = data.slot
     })
+
+    if not newData then
+        DoScreenFadeIn(500)
+        cb({ error = locale('error.no_match_character_registration') })
+        return
+    end
+
+    SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'close' })
+    destroyPreviewCam()
 
     if GetResourceState('qbx_spawn') == 'missing' then
         spawnDefault()
@@ -352,9 +357,10 @@ local function createCharacter(cid)
         end
     end
 
-    destroyPreviewCam()
-    return true
-end
+    cb({})
+end)
+
+-- ── Main Character Selection ───────────────────────────────────────────────
 
 local function chooseCharacter()
     ---@type PlayerEntity[], integer
@@ -388,102 +394,21 @@ local function chooseCharacter()
     ShutdownLoadingScreenNui()
     setupPreviewCam()
 
-    local options = {}
-    for i = 1, amount do
-        local character = characters[i]
-        local name = character and ('%s %s'):format(character.charinfo.firstname, character.charinfo.lastname)
-        options[i] = {
-            title = character and ('%s %s - %s'):format(character.charinfo.firstname, character.charinfo.lastname, character.citizenid) or locale('info.multichar_new_character', i),
-            metadata = character and {
-                Name = name,
-                Gender = character.charinfo.gender == 0 and locale('info.char_male') or locale('info.char_female'),
-                Birthdate = character.charinfo.birthdate,
-                Nationality = character.charinfo.nationality,
-                ['Account Number'] = character.charinfo.account,
-                Bank = lib.math.groupdigits(character.money.bank),
-                Cash = lib.math.groupdigits(character.money.cash),
-                Job = character.job.label,
-                ['Job Grade'] = character.job.grade.name,
-                Gang = character.gang.label,
-                ['Gang Grade'] = character.gang.grade.name,
-                ['Phone Number'] = character.charinfo.phone
-            } or nil,
-            icon = 'user',
-            onSelect = function()
-                if character then
-                    lib.showContext('qbx_core_multichar_character_'..i)
-                    previewPed(character.citizenid)
-                else
-                    local success = createCharacter(i)
-                    if success then return end
+    local nationalityList = config.characters.limitNationalities and lib.load('data.nationalities') or nil
+    local characterData   = buildCharacterData(characters, amount)
 
-                    previewPed(firstCharacterCitizenId)
-                    lib.showContext('qbx_core_multichar_characters')
-                end
-            end
-        }
-
-        if character then
-            lib.registerContext({
-                id = 'qbx_core_multichar_character_'..i,
-                title = ('%s %s - %s'):format(character.charinfo.firstname, character.charinfo.lastname, character.citizenid),
-                canClose = false,
-                menu = 'qbx_core_multichar_characters',
-                options = {
-                    {
-                        title = locale('info.play'),
-                        description = locale('info.play_description', name),
-                        icon = 'play',
-                        onSelect = function()
-                            DoScreenFadeOut(10)
-                            lib.callback.await('qbx_core:server:loadCharacter', false, character.citizenid)
-                            if GetResourceState('qbx_apartments'):find('start') then
-                                TriggerEvent('apartments:client:setupSpawnUI', character.citizenid)
-                            elseif GetResourceState('qbx_spawn'):find('start') then
-                                TriggerEvent('qb-spawn:client:setupSpawns', character.citizenid)
-                                TriggerEvent('qb-spawn:client:openUI', true)
-                            else
-                                spawnLastLocation()
-                            end
-                            destroyPreviewCam()
-                        end
-                    },
-                    config.characters.enableDeleteButton and {
-                        title = locale('info.delete_character'),
-                        description = locale('info.delete_character_description', name),
-                        icon = 'trash',
-                        onSelect = function()
-                            local alert = lib.alertDialog({
-                                header = locale('info.delete_character'),
-                                content = locale('info.confirm_delete'),
-                                centered = true,
-                                cancel = true
-                            })
-                            if alert == 'confirm' then
-                                local success = lib.callback.await('qbx_core:server:deleteCharacter', false, character.citizenid)
-                                Notify(success and locale('success.character_deleted') or locale('error.character_delete_failed'), success and 'success' or 'error')
-
-                                destroyPreviewCam()
-                                chooseCharacter()
-                            else
-                                lib.showContext('qbx_core_multichar_character_'..i)
-                            end
-                        end
-                    } or nil
-                }
-            })
-        end
-    end
-
-    lib.registerContext({
-        id = 'qbx_core_multichar_characters',
-        title = locale('info.multichar_title'),
-        canClose = false,
-        options = options
+    SendNUIMessage({
+        action             = 'show',
+        characters         = characterData,
+        amount             = amount,
+        enableDelete       = config.characters.enableDeleteButton,
+        nationalities      = nationalityList,
+        limitNationalities = config.characters.limitNationalities,
+        dateMin            = config.characters.dateMin,
+        dateMax            = config.characters.dateMax,
+        dateFormat         = config.characters.dateFormat,
     })
-
-    SetTimecycleModifier('default')
-    lib.showContext('qbx_core_multichar_characters')
+    SetNuiFocus(true, true)
 end
 
 RegisterNetEvent('qbx_core:client:spawnNoApartments', function() -- This event is only for no starting apartments
