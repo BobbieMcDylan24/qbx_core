@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Select</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+
+        <!-- Floating Particles -->
+        <div class="particles" id="particles"></div>
+
+        <!-- Corner Decorations -->
+        <div class="corner corner-tl"></div>
+        <div class="corner corner-tr"></div>
+        <div class="corner corner-bl"></div>
+        <div class="corner corner-br"></div>
+
+        <!-- Main UI -->
+        <div class="ui-wrap">
+            <header class="page-header">
+                <div class="badge">QBOX FRAMEWORK</div>
+                <h1 class="page-title">CHARACTER SELECT</h1>
+                <p class="page-sub">Step into your identity and enter the city</p>
+            </header>
+
+            <div id="chars-grid" class="chars-grid">
+                <!-- Character cards injected here -->
+            </div>
+        </div>
+
+        <!-- ── Create Character Modal ── -->
+        <div id="modal-create" class="modal-overlay hidden">
+            <div class="modal-box">
+                <div class="modal-hdr">
+                    <div class="modal-ico">＋</div>
+                    <h2>New Character</h2>
+                    <p>Fill in the details below to create your identity</p>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>First Name</label>
+                            <input type="text" id="inp-fn" placeholder="John" maxlength="50" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <label>Last Name</label>
+                            <input type="text" id="inp-ln" placeholder="Doe" maxlength="50" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="field" id="nationality-field">
+                            <label>Nationality</label>
+                            <!-- Nationality input or select injected by JS -->
+                        </div>
+                        <div class="field">
+                            <label>Date of Birth</label>
+                            <input type="date" id="inp-dob">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="field full">
+                            <label>Gender</label>
+                            <div class="gender-row">
+                                <button class="gender-btn active" data-val="0" onclick="selectGender(this)">♂ Male</button>
+                                <button class="gender-btn" data-val="1" onclick="selectGender(this)">♀ Female</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="create-err" class="err-banner hidden"></div>
+                </div>
+                <div class="modal-ftr">
+                    <button class="btn ghost" onclick="closeCreateModal()">Cancel</button>
+                    <button class="btn primary" id="btn-create-confirm" onclick="submitCreate()">Create Character</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Delete Confirm Modal ── -->
+        <div id="modal-delete" class="modal-overlay hidden">
+            <div class="modal-box slim">
+                <div class="modal-hdr danger">
+                    <div class="modal-ico danger">⚠</div>
+                    <h2>Delete Character</h2>
+                    <p>This action is permanent and cannot be undone</p>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-txt">
+                        Are you sure you want to delete
+                        <strong id="del-name">this character</strong>?
+                    </p>
+                </div>
+                <div class="modal-ftr">
+                    <button class="btn ghost" onclick="closeDeleteModal()">Cancel</button>
+                    <button class="btn danger" id="btn-del-confirm" onclick="confirmDelete()">Delete</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
