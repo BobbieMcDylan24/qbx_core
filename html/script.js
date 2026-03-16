@@ -62,20 +62,18 @@ function spawnParticles() {
     container.innerHTML = '';
     var count = 22;
     for (var i = 0; i < count; i++) {
-        (function() {
-            var p = document.createElement('div');
-            p.className = 'particle';
-            var size = (Math.random() * 2 + 1).toFixed(1) + 'px';
-            p.style.cssText = [
-                'left:'      + (Math.random() * 100).toFixed(1) + '%',
-                'width:'     + size,
-                'height:'    + size,
-                'opacity:'   + (Math.random() * 0.5 + 0.2).toFixed(2),
-                'animation-duration:'  + (Math.random() * 14 + 10).toFixed(1) + 's',
-                'animation-delay:'    + (Math.random() * 12).toFixed(1) + 's'
-            ].join(';');
-            container.appendChild(p);
-        })();
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = (Math.random() * 2 + 1).toFixed(1) + 'px';
+        p.style.cssText = [
+            'left:'      + (Math.random() * 100).toFixed(1) + '%',
+            'width:'     + size,
+            'height:'    + size,
+            'opacity:'   + (Math.random() * 0.5 + 0.2).toFixed(2),
+            'animation-duration:'  + (Math.random() * 14 + 10).toFixed(1) + 's',
+            'animation-delay:'    + (Math.random() * 12).toFixed(1) + 's'
+        ].join(';');
+        container.appendChild(p);
     }
 }
 
@@ -285,11 +283,11 @@ function buildNationalityField() {
     if (uiData && uiData.limitNationalities && uiData.nationalities && uiData.nationalities.length) {
         var sel = document.createElement('select');
         sel.id = 'inp-nat';
-        uiData.nationalities.forEach(function(nat) {
+        uiData.nationalities.forEach(function(nat, idx) {
             var opt = document.createElement('option');
             opt.value = nat;
             opt.textContent = nat;
-            if (nat === 'American') opt.selected = true;
+            if (idx === 0) opt.selected = true;
             sel.appendChild(opt);
         });
         field.appendChild(sel);
@@ -321,8 +319,8 @@ function showCreateError(msg) {
 function submitCreate() {
     var fn  = (document.getElementById('inp-fn').value  || '').trim();
     var ln  = (document.getElementById('inp-ln').value  || '').trim();
-    var nat = (document.getElementById('inp-nat') ? document.getElementById('inp-nat').value : '') || '';
-    nat = nat.trim ? nat.trim() : nat;
+    var natEl = document.getElementById('inp-nat');
+    var nat = (natEl ? natEl.value || '' : '').trim();
     var dob = document.getElementById('inp-dob').value  || '';
     var genderEl = document.querySelector('.gender-btn.active');
     var gender   = genderEl ? parseInt(genderEl.dataset.val, 10) : 0;

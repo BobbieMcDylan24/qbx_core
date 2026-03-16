@@ -533,3 +533,9 @@ body {
     92%  { opacity: 0.4; }
     100% { transform: translateY(-105vh); opacity: 0; }
 }
+
+/* Respect system-level reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    .particle { display: none; }
+}

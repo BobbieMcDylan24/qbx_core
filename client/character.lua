@@ -308,7 +308,8 @@ RegisterNUICallback('multichar_delete', function(data, cb)
         local characters, amount = lib.callback.await('qbx_core:server:getCharacters')
         local characterData = buildCharacterData(characters, amount)
         SendNUIMessage({ action = 'refresh', characters = characterData, amount = amount })
-        previewPed(characters[1] and characters[1].citizenid)
+        -- Use refreshed characterData to avoid stale references after deletion
+        previewPed(characterData[1] and not characterData[1].empty and characterData[1].citizenid)
     else
         Notify(locale('error.character_delete_failed'), 'error')
     end
@@ -316,6 +317,9 @@ RegisterNUICallback('multichar_delete', function(data, cb)
 end)
 
 RegisterNUICallback('multichar_create', function(data, cb)
+    -- Validate text fields against profanity and format rules.
+    -- birthdate is already constrained by the date input min/max on the client, and
+    -- gender is always 0 or 1 so neither requires profanity/format validation.
     for _, field in ipairs({ data.firstname, data.lastname, data.nationality }) do
         if not validateField(field) then
             cb({ error = locale('error.no_match_character_registration') })
