@@ -192,6 +192,40 @@ local function capString(str)
     end)
 end
 
+local function cityTour()
+    if not config.characters.cityTour.enabled then return end
+
+    while not IsScreenFadedOut() do
+        Wait(0)
+    end
+
+    local tourCam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+
+    for _, location in ipairs(config.characters.cityTour.locations) do
+        SetCamCoord(tourCam, location.camCoords.x, location.camCoords.y, location.camCoords.z)
+        PointCamAtCoord(tourCam, location.pointAt.x, location.pointAt.y, location.pointAt.z)
+        RenderScriptCams(true, false, 0, true, true)
+
+        DoScreenFadeIn(500)
+        while not IsScreenFadedIn() do
+            Wait(0)
+        end
+
+        Notify(location.title, 'info', location.duration, location.description, 'top')
+
+        Wait(location.duration)
+
+        DoScreenFadeOut(500)
+        while not IsScreenFadedOut() do
+            Wait(0)
+        end
+    end
+
+    SetCamActive(tourCam, false)
+    DestroyCam(tourCam, true)
+    RenderScriptCams(false, false, 0, true, true)
+end
+
 local function spawnDefault() -- We use a callback to make the server wait on this to be done
     DoScreenFadeOut(500)
 
@@ -346,6 +380,8 @@ RegisterNUICallback('multichar_create', function(data, cb)
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
     destroyPreviewCam()
+
+    cityTour()
 
     if GetResourceState('qbx_spawn') == 'missing' then
         spawnDefault()
