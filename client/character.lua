@@ -206,6 +206,14 @@ local function cityTour()
         PointCamAtCoord(tourCam, location.pointAt.x, location.pointAt.y, location.pointAt.z)
         RenderScriptCams(true, false, 0, true, true)
 
+        RequestCollisionAtCoord(location.camCoords.x, location.camCoords.y, location.camCoords.z)
+        NewLoadSceneStartSphere(location.camCoords.x, location.camCoords.y, location.camCoords.z, 50.0, 2)
+        local loadTimeout = GetGameTimer() + 10000
+        while not IsNewLoadSceneLoaded() and GetGameTimer() < loadTimeout do
+            Wait(100)
+        end
+        NewLoadSceneStop()
+
         DoScreenFadeIn(500)
         while not IsScreenFadedIn() do
             Wait(0)
