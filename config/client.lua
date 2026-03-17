@@ -19,6 +19,33 @@ return {
             ['bad word'] = true
         },
 
+        cityTour = { -- Cinematic city tour shown to new characters after creation
+            enabled = true,
+            locations = {
+                {
+                    camCoords = vec3(300.0, -1430.0, 37.0),
+                    pointAt = vec3(297.0, -1449.0, 30.0),
+                    title = 'Pillbox Hill Medical Center',
+                    description = 'Your local hospital. Come here for medical care, surgery, and emergency treatment.',
+                    duration = 5000,
+                },
+                {
+                    camCoords = vec3(437.0, -1006.0, 40.0),
+                    pointAt = vec3(440.0, -981.0, 30.0),
+                    title = 'Mission Row Police Department',
+                    description = 'Home of the Los Santos Police Department. Uphold the law and stay out of trouble.',
+                    duration = 5000,
+                },
+                {
+                    camCoords = vec3(130.0, -1050.0, 33.0),
+                    pointAt = vec3(149.0, -1042.0, 29.0),
+                    title = 'Fleeca Bank - Legion Square',
+                    description = 'Your local bank in Legion Square. Deposit your money and manage your finances here.',
+                    duration = 5000,
+                },
+            },
+        },
+
         locations = { -- Spawn locations for multichar, these are chosen randomly
             {
                 pedCoords = vec4(969.25, 72.61, 116.18, 276.55),
